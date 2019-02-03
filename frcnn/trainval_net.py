@@ -184,7 +184,7 @@ if __name__ == '__main__':
   elif args.dataset == "kaist":
       args.imdb_name ="train_subset"
       args.imdbval_name = "combined_test"
-      args.set_cfgs = ['ANCHOR_SCALES', '[0.05, 0.1, 0.25, 0.5]', 'ANCHOR_RATIOS', '[0.5, 1, 2]', 'MAX_NUM_GT_BOXES', '30']#scales=[4,8,16,32] ratios = [0.5, 1, 2]--default
+      args.set_cfgs = ['ANCHOR_SCALES', '[0.5,1,2,4]', 'ANCHOR_RATIOS', '[0.5, 1, 2]', 'MAX_NUM_GT_BOXES', '30']#scales=[4,8,16,32] ratios = [0.5, 1, 2]--default# [0.05, 0.1, 0.25, 0.5]
   
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
