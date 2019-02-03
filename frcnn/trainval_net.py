@@ -24,7 +24,7 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
 
-from roi_data_layer.roidb import combined_roidb
+from roi_data_layer.roidb import combined_roidb_new
 from roi_data_layer.roibatchLoader import roibatchLoader
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
@@ -32,12 +32,18 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
+#adding import
+from datasets.factory import get_imdb
+
+from torchsummary import summary
 
 def parse_args():
   """
   Parse input arguments
   """
+  
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+  
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
                       default='pascal_voc', type=str)
@@ -49,16 +55,16 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=20, type=int)
+                      default=30, type=int)#20
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
-                      default=100, type=int)
+                      default=100, type=int)#100
   parser.add_argument('--checkpoint_interval', dest='checkpoint_interval',
                       help='number of iterations to display',
                       default=10000, type=int)
 
   parser.add_argument('--save_dir', dest='save_dir',
-                      help='directory to save models', default="models",
+                      help='directory to save models', default='../../../../../../../mnt/nfs/scratch1/shasvatmukes/models',
                       type=str)
   parser.add_argument('--nw', dest='num_workers',
                       help='number of worker to load data',
@@ -85,7 +91,7 @@ def parse_args():
                       default="sgd", type=str)
   parser.add_argument('--lr', dest='lr',
                       help='starting learning rate',
-                      default=0.001, type=float)
+                      default=0.001, type=float)#0.001
   parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                       help='step to do learning rate decay, unit is epoch',
                       default=5, type=int)
@@ -96,7 +102,7 @@ def parse_args():
 # set training session
   parser.add_argument('--s', dest='session',
                       help='training session',
-                      default=1, type=int)
+                      default=12, type=int)
 
 # resume trained model
   parser.add_argument('--r', dest='resume',
@@ -104,13 +110,13 @@ def parse_args():
                       default=False, type=bool)
   parser.add_argument('--checksession', dest='checksession',
                       help='checksession to load model',
-                      default=1, type=int)
+                      default=12, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load model',
                       default=1, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load model',
-                      default=0, type=int)
+                      default=11, type=int)
 # log and diaplay
   parser.add_argument('--use_tfb', dest='use_tfboard',
                       help='whether use tensorboard',
@@ -118,6 +124,7 @@ def parse_args():
 
   args = parser.parse_args()
   return args
+
 
 
 class sampler(Sampler):
@@ -173,8 +180,12 @@ if __name__ == '__main__':
       # train scale: ['150-50-20', '150-50-50', '500-150-80', '750-250-150', '1750-700-450', '1600-400-20']
       args.imdb_name = "vg_150-50-50_minitrain"
       args.imdbval_name = "vg_150-50-50_minival"
-      args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
-
+      args.set_cfgs = ['ANCHOR_SCALES', '[2, 4, 8, 16]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']#sclaes=[4,8,16,32]--default
+  elif args.dataset == "kaist":
+      args.imdb_name ="train_subset"
+      args.imdbval_name = "combined_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[0.05, 0.1, 0.25, 0.5]', 'ANCHOR_RATIOS', '[0.5, 1, 2]', 'MAX_NUM_GT_BOXES', '30']#scales=[4,8,16,32] ratios = [0.5, 1, 2]--default
+  
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
   if args.cfg_file is not None:
@@ -194,7 +205,7 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
-  imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
+  imdb, roidb, ratio_list, ratio_index = combined_roidb_new(args.imdb_name)
   train_size = len(roidb)
 
   print('{:d} roidb entries'.format(len(roidb)))
@@ -237,11 +248,11 @@ if __name__ == '__main__':
   if args.net == 'vgg16':
     fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic)
   elif args.net == 'res101':
-    fasterRCNN = resnet(imdb.classes, 101, pretrained=True, class_agnostic=args.class_agnostic)
+    fasterRCNN = resnet(imdb.classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
   elif args.net == 'res50':
-    fasterRCNN = resnet(imdb.classes, 50, pretrained=True, class_agnostic=args.class_agnostic)
+    fasterRCNN = resnet(imdb.classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
   elif args.net == 'res152':
-    fasterRCNN = resnet(imdb.classes, 152, pretrained=True, class_agnostic=args.class_agnostic)
+    fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic)
   else:
     print("network is not defined")
     pdb.set_trace()
@@ -271,6 +282,9 @@ if __name__ == '__main__':
 
   if args.cuda:
     fasterRCNN.cuda()
+  
+  print(fasterRCNN,(3,600,800))
+
 
   if args.resume:
     load_name = os.path.join(output_dir,
@@ -308,9 +322,13 @@ if __name__ == '__main__':
     data_iter = iter(dataloader)
     for step in range(iters_per_epoch):
       data = next(data_iter)
+      #print("data[2] in trainval_net.py")
+      #print(data[2].size())
       im_data.data.resize_(data[0].size()).copy_(data[0])
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
+      #print("gt_boxes")
+      #print(gt_boxes.size())
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
 
       fasterRCNN.zero_grad()
@@ -318,14 +336,21 @@ if __name__ == '__main__':
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
-
+      #print("after fasterRCNN in trainval_net.py")
+      #print("rois_label")
+      #print(rois_label)
+      #print(rois_label>0)
       loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
            + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
       loss_temp += loss.item()
+      #print("loss temp")
+      #print(loss_temp)
 
       # backward
       optimizer.zero_grad()
+      #print("inside backward pass")
       loss.backward()
+      #print("after loss backward")
       if args.net == "vgg16":
           clip_gradient(fasterRCNN, 10.)
       optimizer.step()
@@ -368,7 +393,7 @@ if __name__ == '__main__':
         loss_temp = 0
         start = time.time()
 
-    
+ 
     save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
@@ -382,3 +407,4 @@ if __name__ == '__main__':
 
   if args.use_tfboard:
     logger.close()
+

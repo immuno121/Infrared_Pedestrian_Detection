@@ -1,5 +1,4 @@
-# --------------------------------------------------------
-# Tensorflow Faster R-CNN
+#orflow Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Jiasen Lu, Jianwei Yang, based on code from Ross Girshick
 # --------------------------------------------------------
@@ -21,7 +20,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
 import pickle
-from roi_data_layer.roidb import combined_roidb
+from roi_data_layer.roidb import combined_roidb_new
 from roi_data_layer.roibatchLoader import roibatchLoader
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
@@ -52,13 +51,13 @@ def parse_args():
                       default='cfgs/vgg16.yml', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res50, res101, res152',
-                      default='res101', type=str)
+                      default='vgg16', type=str)
   parser.add_argument('--set', dest='set_cfgs',
                       help='set config keys', default=None,
                       nargs=argparse.REMAINDER)
   parser.add_argument('--load_dir', dest='load_dir',
-                      help='directory to load models', default="models",
-                      type=str)
+                      help='directory to load models', default='../../../../../../../mnt/nfs/scratch1/shasvatmukes/models/'
+                      ,type=str)
   parser.add_argument('--cuda', dest='cuda',
                       help='whether use CUDA',
                       action='store_true')
@@ -76,13 +75,13 @@ def parse_args():
                       default=0, type=int)
   parser.add_argument('--checksession', dest='checksession',
                       help='checksession to load model',
-                      default=1, type=int)
+                      default=12, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=1, type=int)
+                      default=30, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
-                      default=10021, type=int)
+                      default=16115, type=int)
   parser.add_argument('--vis', dest='vis',
                       help='visualization mode',
                       action='store_true')
@@ -124,7 +123,11 @@ if __name__ == '__main__':
       args.imdb_name = "vg_150-50-50_minitrain"
       args.imdbval_name = "vg_150-50-50_minival"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
-
+  elif args.dataset == "kaist":
+      args.imdb_name = "train_subset"
+      args.imdbval_name ="train_subset"#change here
+      args.set_cfgs = ['ANCHOR_SCALES', '[0.05, 0.1, 0.25, 0.5]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']#scales=[4,8,16,32]--default
+  
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
   if args.cfg_file is not None:
@@ -136,12 +139,13 @@ if __name__ == '__main__':
   pprint.pprint(cfg)
 
   cfg.TRAIN.USE_FLIPPED = False
-  imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdbval_name, False)
+  imdb, roidb, ratio_list, ratio_index = combined_roidb_new(args.imdbval_name, False)
   imdb.competition_mode(on=True)
 
   print('{:d} roidb entries'.format(len(roidb)))
 
   input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
+  
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
@@ -149,7 +153,7 @@ if __name__ == '__main__':
 
   # initilize the network here.
   if args.net == 'vgg16':
-    fasterRCNN = vgg16(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic)
+    fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic)
   elif args.net == 'res101':
     fasterRCNN = resnet(imdb.classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
   elif args.net == 'res50':
@@ -158,7 +162,7 @@ if __name__ == '__main__':
     fasterRCNN = resnet(imdb.classes, 152, pretrained=False, class_agnostic=args.class_agnostic)
   else:
     print("network is not defined")
-    pdb.set_trace()
+    #pdb.set_trace()
 
   fasterRCNN.create_architecture()
 
@@ -196,8 +200,9 @@ if __name__ == '__main__':
     fasterRCNN.cuda()
 
   start = time.time()
-  max_per_image = 100
+  #max_per_image = 100
 
+  max_per_image = 7 #for kaist
   vis = args.vis
 
   if vis:
@@ -288,11 +293,13 @@ if __name__ == '__main__':
             keep = nms(cls_dets, cfg.TEST.NMS)
             cls_dets = cls_dets[keep.view(-1).long()]
             if vis:
-              im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3)
+              im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.1) #overfit = 0.93
             all_boxes[j][i] = cls_dets.cpu().numpy()
+            #print(all_boxes)
           else:
             all_boxes[j][i] = empty_array
-
+      #print('all_boxes')
+      #print(all_boxes)  
       # Limit to max_per_image detections *over all classes*
       if max_per_image > 0:
           image_scores = np.hstack([all_boxes[j][i][:, -1]
@@ -311,8 +318,9 @@ if __name__ == '__main__':
       sys.stdout.flush()
 
       if vis:
-          cv2.imwrite('result.png', im2show)
-          pdb.set_trace()
+          #cv2.imwrite('visualize'+str(i)+'.png', im2show)
+          cv2.imwrite('result'+str(i)+'.png', im2show)
+          #pdb.set_trace()
           #cv2.imshow('test', im2show)
           #cv2.waitKey(0)
 
@@ -320,7 +328,9 @@ if __name__ == '__main__':
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
   print('Evaluating detections')
+  #print(all_boxes)
   imdb.evaluate_detections(all_boxes, output_dir)
 
   end = time.time()
   print("test time: %0.4fs" % (end - start))
+
