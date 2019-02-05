@@ -1,0 +1,20 @@
+############
+TESTING usinf debasmita weights: frcc_1_50_44315
+i##################
+
+job id:4693751:
+day_test
+
+job id:4693752:
+night_test
+
+
+job id:4693754:
+combined_test
+
+job id:4693755:
+salient_combined_test
+
+job id:4693757
+test_combined_salient_ir
+

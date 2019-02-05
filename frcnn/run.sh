@@ -18,9 +18,9 @@
 #python braindecode/models/mymodel
 #python trainval_net.py --dataset kaist --net vgg16 --cuda --mGPU --session=12
 #python trainval_net.py --dataset kaist --net vgg16 --cuda --mGPUs --epochs=10 --s=1
-python trainval_net.py --dataset kaist --net vgg16 --cuda --epochs=50 --s=2 --checksession 2 --checkepoch 20 --checkpoint 11 --r=True
+#python trainval_net.py --dataset kaist --net vgg16 --cuda --epochs=50 --s=2 --checksession 2 --checkepoch 20 --checkpoint 11 --r=True
 #python test_net.py --dataset kaist --net vgg16 --cuda
-python test_net.py --dataset kaist --net vgg16 --cuda  --checksession 2 --checkepoch 20 --checkpoint 11  --vis               
+python test_net.py --dataset kaist --net vgg16 --cuda  --checksession 1 --checkepoch 50 --checkpoint 44315               
 
 #python process_data.py
 #python mymodel.py

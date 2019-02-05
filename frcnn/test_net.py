@@ -126,7 +126,7 @@ if __name__ == '__main__':
   elif args.dataset == "kaist":
       args.imdb_name = "train_subset"
       args.imdbval_name ="train_subset"#change here
-      args.set_cfgs = ['ANCHOR_SCALES', '[1]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']#scales=[4,8,16,32]--default
+      args.set_cfgs = ['ANCHOR_SCALES', '[0.05,0.1,0.25,0.5,1,1.2,1.5,1.9,2.3,2.6]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']#scales=[4,8,16,32]--default
   
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
